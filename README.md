@@ -259,18 +259,258 @@ The library includes a basic utility function `bangla_to_ipa_converter` to attem
 
 ---
 
-## Utility Functions (`utils.py`)
+# Bengali Normalizer Utilities
 
-Several helper functions reside in `bengali_normalizer.utils`. These handle tasks like:
+This document describes the utility functions found within the `bengali_normalizer.utils` module. These functions provide essential low-level operations like digit conversion, date/time parsing, string manipulation, and phonetic conversion, primarily supporting the main normalization pipeline (`normalizer.py` and `methods.py`).
 
-*   Converting between Bengali and English digits (`bangla_to_english_number`).
-*   Parsing date components (`extract_date_components_bangla`).
-*   Determining time periods (`get_bangla_time_period`).
-*   Separating year components (`separate_year`).
-*   Cleaning extra spaces (`remove_extra_spaces`).
-*   Phonetic conversion (`bangla_to_ipa_converter`).
+While these functions are mostly intended for internal use, they can be imported and used directly for specific tasks if needed.
 
-These are primarily intended for internal use by the normalizer and extractor functions, but advanced users might find them useful for specific tasks. Direct use requires importing them specifically from `bengali_normalizer.utils`.
+**Note:** Many of these functions depend on data structures (like number-to-word mappings, month names) defined in `bengali_normalizer.conversion_data`. Ensure this module is present and correctly populated for the utilities to function as expected.
+
+## Importing Utilities
+
+To use these functions directly, import them from the `utils` submodule:
+
+```python
+from bengali_normalizer.utils import bangla_to_english_number, remove_extra_spaces
+# Import other functions as needed
+```
+
+---
+
+## Function Descriptions and Examples
+
+### 1. `separate_year(year_str)`
+
+*   **Description:** Takes a 4-digit year as a string (accepts both Bengali '০-৯' and Western '0-9' digits). It converts the year to an integer and separates it into two parts: the century/millennium part (e.g., 1900, 2000) and the remaining two digits (e.g., 95, 23). Useful for converting years into words like "উনিশশো পঁচানব্বই". Returns a tuple `(part1_int, part2_int)`. Returns `(None, None)` if parsing fails.
+*   **Parameters:**
+    *   `year_str` (str): A string representing a 4-digit year.
+*   **Returns:** `tuple[Optional[int], Optional[int]]`
+
+```python
+from bengali_normalizer.utils import separate_year
+
+year1_bn = "১৯৯৮"
+year2_en = "2025"
+invalid_year = "abc"
+
+parts1 = separate_year(year1_bn)
+parts2 = separate_year(year2_en)
+parts3 = separate_year(invalid_year) # Example of failure
+
+print(f"'{year1_bn}' -> {parts1}")
+print(f"'{year2_en}' -> {parts2}")
+print(f"'{invalid_year}' -> {parts3}")
+
+# Expected Output:
+# '১৯৯৮' -> (1900, 98)
+# '2025' -> (2000, 25)
+# Warning: Could not parse year 'abc' as integer. (Printed to stderr)
+# 'abc' -> (None, None)
+```
+
+---
+
+### 2. `extract_date_components_bangla(date_str)`
+
+*   **Description:** Parses a date string provided in various common Bengali or English formats (e.g., `১৫ জানুয়ারি, ২০২৫`, `05-05-1995`, `২২/মার্চ/২০২৫`). It cleans the input (removes ordinal suffixes, normalizes separators), translates month names and digits for parsing using `dateutil.parser`, and then converts the extracted day, month name, and year back into Bengali strings.
+*   **Dependencies:** Requires `dateutil.parser` library and relies on `conversion_data.bangla_months` map.
+*   **Parameters:**
+    *   `date_str` (str): The date string to parse.
+*   **Returns:** `tuple[Optional[str], Optional[str], Optional[str]]` - A tuple containing (day\_bengali, month\_bengali, year\_bengali). Returns `(None, None, None)` if parsing fails.
+
+```python
+from bengali_normalizer.utils import extract_date_components_bangla
+
+date1 = "১৫ জানুয়ারি, ২০২৫"
+date2 = "05-05-1995"
+date3 = "২২শে মার্চ, ২০২৪" # Handles common suffixes
+invalid_date = "32শে জানুয়ারি"
+
+components1 = extract_date_components_bangla(date1)
+components2 = extract_date_components_bangla(date2)
+components3 = extract_date_components_bangla(date3)
+components4 = extract_date_components_bangla(invalid_date) # Example of failure
+
+print(f"'{date1}' -> {components1}")
+print(f"'{date2}' -> {components2}")
+print(f"'{date3}' -> {components3}")
+print(f"'{invalid_date}' -> {components4}")
+
+# Expected Output:
+# '১৫ জানুয়ারি, ২০২৫' -> ('১৫', 'জানুয়ারি', '২০২৫')
+# '05-05-1995' -> ('৫', 'মে', '১৯৯৫')
+# '২২শে মার্চ, ২০২৪' -> ('২২', 'মার্চ', '২০২৪')
+# Error parsing date '32শে জানুয়ারি'... (Printed to stderr)
+# '32শে জানুয়ারি' -> (None, None, None)
+```
+
+---
+
+### 3. `bangla_to_english_number(input_number_str)`
+
+*   **Description:** Converts a number represented as a string, which can contain Bengali ('০-৯') or Western ('0-9') digits, along with optional commas (`,`), a decimal point (`.`), and negative signs (`-` or `−`), into a standard Python `int` or `float`. It handles cleaning (removing commas, normalizing negative signs) and digit translation before conversion.
+*   **Parameters:**
+    *   `input_number_str` (str): The string representation of the number.
+*   **Returns:** `Union[int, float, None]` - The converted number, or `None` if the conversion fails.
+
+```python
+from bengali_normalizer.utils import bangla_to_english_number
+
+num_str1 = "১২৩.৪৫"
+num_str2 = "-১,০০০"
+num_str3 = "−৭৫"
+num_str4 = "৫০%" # Example likely to fail conversion as it's not purely a number
+
+num1 = bangla_to_english_number(num_str1)
+num2 = bangla_to_english_number(num_str2)
+num3 = bangla_to_english_number(num_str3)
+num4 = bangla_to_english_number(num_str4)
+
+print(f"'{num_str1}' -> {num1} (Type: {type(num1).__name__})")
+print(f"'{num_str2}' -> {num2} (Type: {type(num2).__name__})")
+print(f"'{num_str3}' -> {num3} (Type: {type(num3).__name__})")
+print(f"'{num_str4}' -> {num4}")
+
+# Expected Output:
+# '১২৩.৪৫' -> 123.45 (Type: float)
+# '-১,০০০' -> -1000 (Type: int)
+# '−৭৫' -> -75 (Type: int)
+# Warning: Could not convert '৫০%' to English number. (Printed to stderr)
+# '৫০%' -> None
+```
+
+---
+
+### 4. `remove_extra_spaces(input_text)`
+
+*   **Description:** A simple string cleaning utility. It takes an input string and replaces any sequence of two or more whitespace characters (including spaces, tabs, newlines) with a single space. It also removes leading and trailing whitespace from the string.
+*   **Parameters:**
+    *   `input_text` (str): The text to clean.
+*   **Returns:** `str` - The cleaned text with normalized spacing.
+
+```python
+from bengali_normalizer.utils import remove_extra_spaces
+
+text = "   অনেক   \n  স্পেস  এবং \tট্যাব   "
+cleaned_text = remove_extra_spaces(text)
+
+print(f"Original: '{text}'")
+print(f"Cleaned: '{cleaned_text}'")
+
+# Expected Output:
+# Original: '   অনেক   \n  স্পেস  এবং \tট্যাব   '
+# Cleaned: 'অনেক স্পেস এবং ট্যাব'
+```
+
+---
+
+### 5. `convert_decimal_to_words(decimal_part_str)`
+
+*   **Description:** Specifically designed to handle the *decimal part* of a number (the digits after the decimal point). It takes these digits as a string, ensures they are Bengali digits, and then converts *each digit individually* into its corresponding Bengali word using the `conversion_data.banglaNum` mapping. Returns a space-separated string of these digit words.
+*   **Dependencies:** Relies on `conversion_data.banglaNum`.
+*   **Parameters:**
+    *   `decimal_part_str` (str): A string containing only the digits found after the decimal point.
+*   **Returns:** `str` - Space-separated Bengali words for each digit.
+
+```python
+# Assuming conversion_data.banglaNum = {'০': 'শূন্য', '১': 'এক', ... '৫': 'পাঁচ', ...}
+from bengali_normalizer.utils import convert_decimal_to_words
+
+decimal1 = "৭৫"
+decimal2 = "০৫"
+decimal3 = ""
+
+words1 = convert_decimal_to_words(decimal1)
+words2 = convert_decimal_to_words(decimal2)
+words3 = convert_decimal_to_words(decimal3)
+
+print(f"'{decimal1}' -> '{words1}'")
+print(f"'{decimal2}' -> '{words2}'")
+print(f"'{decimal3}' -> '{words3}'")
+
+# Expected Output:
+# '৭৫' -> 'সাত পাঁচ'
+# '০৫' -> 'শূন্য পাঁচ'
+```
+
+---
+
+### 6. `get_bangla_time_period(hour_24)`
+
+*   **Description:** Determines the appropriate Bengali time period word (like "ভোর", "সকাল", "দুপুর", "বিকেল", "সন্ধ্যা", "রাত") based on the hour provided in 24-hour format (0-23).
+*   **Parameters:**
+    *   `hour_24` (int): The hour (0-23).
+*   **Returns:** `str` - The corresponding Bengali time period word, or an empty string/warning for invalid input.
+
+```python
+from bengali_normalizer.utils import get_bangla_time_period
+
+hour1 = 5  # ভোর
+hour2 = 11 # সকাল
+hour3 = 14 # দুপুর
+hour4 = 17 # বিকেল
+hour5 = 19 # সন্ধ্যা
+hour6 = 23 # রাত
+hour7 = 1  # রাত
+
+period1 = get_bangla_time_period(hour1)
+period2 = get_bangla_time_period(hour2)
+period3 = get_bangla_time_period(hour3)
+period4 = get_bangla_time_period(hour4)
+period5 = get_bangla_time_period(hour5)
+period6 = get_bangla_time_period(hour6)
+period7 = get_bangla_time_period(hour7)
+
+print(f"{hour1} -> {period1}")
+print(f"{hour2} -> {period2}")
+print(f"{hour3} -> {period3}")
+print(f"{hour4} -> {period4}")
+print(f"{hour5} -> {period5}")
+print(f"{hour6} -> {period6}")
+print(f"{hour7} -> {period7}")
+
+# Expected Output:
+# 5 -> ভোর
+# 11 -> সকাল
+# 14 -> দুপুর
+# 17 -> বিকেল
+# 19 -> সন্ধ্যা
+# 23 -> রাত
+# 1 -> রাত
+```
+
+---
+
+### 7. `bangla_to_ipa_converter(sentence)`
+
+*   **Description:** Attempts a rule-based conversion of a Bengali text string into the International Phonetic Alphabet (IPA). It iterates through the input string, trying to match the longest possible character sequences (especially conjuncts/যুক্তাক্ষর) against predefined mappings in `conversion_data.bangla_conjuncts_to_ipa`. If no conjunct matches, it falls back to mappings for individual characters in `conversion_data.bangla_to_ipa`.
+*   **Dependencies:** Accuracy is highly dependent on the completeness and correctness of the `bangla_to_ipa` and `bangla_conjuncts_to_ipa` dictionaries in `conversion_data.py`.
+*   **Limitations:** This is a basic, rule-based approach and may not capture all phonetic nuances, variations in pronunciation, or context-dependent sound changes present in spoken Bengali.
+*   **Parameters:**
+    *   `sentence` (str): The Bengali text to convert.
+*   **Returns:** `str` - The attempted IPA representation of the input string. Characters or sequences not found in the mappings will typically be passed through unchanged.
+
+```python
+# This example assumes hypothetical mappings in conversion_data.py
+# from bengali_normalizer.conversion_data import bangla_to_ipa, bangla_conjuncts_to_ipa
+# bangla_to_ipa = {'ব': 'b', 'া': 'ɑ', 'ং': 'ŋ', 'ল': 'l'}
+# bangla_conjuncts_to_ipa = {} # Assuming no specific conjunct map for simplicity here
+
+from bengali_normalizer.utils import bangla_to_ipa_converter
+
+text = "বাংলা"
+
+# Run the converter (Make sure conversion_data has some mappings)
+ipa_text = bangla_to_ipa_converter(text)
+
+print(f"'{text}' -> '{ipa_text}'")
+
+# Example Expected Output (highly dependent on actual maps):
+# 'বাংলা' -> 'bɑŋlɑ'
+```
+
+---
 
 ---
 
