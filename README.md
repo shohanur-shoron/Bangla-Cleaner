@@ -1,13 +1,4 @@
 # Bangla-Cleaner
-Okay, here is the revised `README.md` content following your specified structure: prioritizing `normalize_text`, then individual normalizers, then extractors, and highlighting the IPA and utility functions.
-
-```markdown
-# Bengali Text Normalizer (bengali-normalizer)
-
-[![PyPI version](https://badge.fury.io/py/bengali-normalizer.svg)](https://badge.fury.io/py/bengali-normalizer)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python Versions](https://img.shields.io/pypi/pyversions/bengali-normalizer.svg)](https://pypi.org/project/bengali-normalizer/)
-<!-- Add other badges like build status if you set up CI/CD -->
 
 A Python library designed to convert various written forms of Bengali text elements (like numbers, dates, times, currency, percentages, etc.) into their corresponding spoken word representations. This is particularly useful for:
 
