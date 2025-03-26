@@ -707,7 +707,7 @@ print(f"'{text}' -> '{ipa_text}'")
 
 ---
 
-## Internal Data (`conversion_data.py`)
+## Internal Data
 
 The accuracy and scope of the normalization rely heavily on an internal module `bengali_normalizer.conversion_data`. This file contains essential dictionaries mapping:
 
