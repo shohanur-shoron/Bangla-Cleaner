@@ -207,31 +207,224 @@ print(f"Normalized Numbers Only: {normalized_text}")
 
 ---
 
-## Extractor Functions
+# Bengali Normalizer Extractors
 
-For advanced users or specific tasks, the library also exposes functions used to *detect* (extract) patterns without necessarily normalizing them. These functions return a list of strings matching the specific pattern found in the text. They are primarily used internally by the normalizer functions.
+This document describes the extractor functions found within the `bengali_normalizer.extractor` module. These functions are designed to **detect and extract specific patterns** from Bengali text, such as dates, phone numbers, currency amounts, etc., using regular expressions.
 
-*   `extract_bengali_dates(text)`
-*   `extract_mobile_numbers(text)`
-*   `extract_time(text)`
-*   `extract_taka_amounts(text)`
-*   `extract_percentages(text)`
-*   `extract_temperatures(text)`
-*   `extract_ratios(text)`
-*   `extract_ordinals(text)`
-*   `extract_years_with_context(text)`
-*   `extract_numbers(text)`
+They are primarily used internally by the normalizer functions (`normalizer.py`) to identify which parts of the text need conversion. However, you can import and use these functions directly if your task only requires *finding* these patterns without necessarily converting them to words.
 
-**Example: Extracting only Taka amounts**
+**Key Features of Extractors:**
+
+*   Each function targets a specific type of textual element.
+*   They typically return a list of strings, where each string is a detected match found in the input text.
+*   They are designed to handle variations in formatting, including both Bengali (০-৯) and Western (0-9) digits where applicable.
+*   The regular expressions aim for accuracy but might occasionally have edge cases or limitations depending on the complexity and ambiguity of the text.
+
+## Importing Extractors
+
+To use these functions directly, import them from the `extractor` submodule:
 
 ```python
-from bengali_normalizer import extract_taka_amounts
-
-text = "দাম ৳৫০০ এবং ছাড় ৳৫০.২৫ টাকা।"
-amounts = extract_taka_amounts(text)
-print(amounts)
-# Expected: ['৳৫০০', '৳৫০.২৫ টাকা']
+from bengali_normalizer.extractor import extract_mobile_numbers, extract_bengali_dates
+# Import other functions as needed
 ```
+
+---
+
+## Function Descriptions and Examples
+
+### 1. `extract_mobile_numbers(text)`
+
+*   **Description:** Finds potential Bangladeshi mobile phone numbers in the text. It looks for standard prefixes (013-019 or ০১৩-০১৯), allows for an optional `+88` or `+৮৮` prefix, and handles an optional hyphen in the common `NNN-NNNNNN` format. It tries to avoid matching invalid sequences or numbers embedded within other words/codes.
+*   **Supported Formats (Examples):** `০১৭১২৩৪৫৬৭৮`, `+৮৮০১৭১২৩৪৫৬৭৮`, `01712-345678`, `+8801612345677`
+*   **Returns:** `list[str]` - A list of matched phone number strings.
+
+```python
+from bengali_normalizer.extractor import extract_mobile_numbers
+
+text = "তার নম্বর 01712345678 এবং অন্যটি +৮৮০১৯৮৭-৬৫৪৩২১।"
+numbers = extract_mobile_numbers(text)
+print(f"Mobile numbers found: {numbers}")
+
+# Expected Output:
+# Mobile numbers found: ['01712345678', '+৮৮০১৯৮৭-৬৫৪৩২১']
+```
+
+---
+
+### 2. `extract_bengali_dates(text)`
+
+*   **Description:** Detects and extracts date expressions written in various common formats. It supports Bengali and English month names, Bengali and English digits, and different separators (`-`, `/`, space, comma). It also handles common Bengali date suffixes (like 'শে', 'ই', 'লা') and English ordinal suffixes ('st', 'nd', 'rd', 'th').
+*   **Supported Formats (Examples):** `১৫ জানুয়ারি, ২০২৫`, `২৮শে ডিসেম্বর ২০২৪`, `০৫-০৫-১৯৯৫`, `২২/মার্চ/২০২৫`, `25 December 2024`, `2024-12-31`, `৩০/১২/২০২৫`
+*   **Returns:** `list[str]` - A list of matched date strings.
+
+```python
+from bengali_normalizer.extractor import extract_bengali_dates
+
+text = "মিটিং হবে ১৫ জানুয়ারি, ২০২৫ অথবা 2024-12-25 তারিখে।"
+dates = extract_bengali_dates(text)
+print(f"Dates found: {dates}")
+
+# Expected Output:
+# Dates found: ['১৫ জানুয়ারি, ২০২৫', '2024-12-25']
+```
+
+---
+
+### 3. `extract_numbers(text)`
+
+*   **Description:** Finds standalone numerical values (integers or floating-point numbers) within the text. It supports both Bengali and English digits, allows for commas as thousands separators (e.g., `১,০০০`), decimal points (`.`), and optional leading negative signs (`-` or `−`). It's designed to run *after* more specific extractors (like dates, times, phones) in a full normalization pipeline to avoid incorrectly matching parts of those structures.
+*   **Supported Formats (Examples):** `১০০`, `45`, `২.৫`, `-১০.৭৫`, `১,২৩,৪৫৬`, `98.6`, `−5`
+*   **Returns:** `list[str]` - A list of matched number strings.
+
+```python
+from bengali_normalizer.extractor import extract_numbers
+
+text = "সংখ্যাগুলো হলো ১২৩, -৭৫.৫ এবং ১,০০,০০০।"
+# Note: If text contained dates/times, this extractor might pick up
+# number parts if not run in the correct sequence.
+numbers = extract_numbers(text)
+print(f"Numbers found: {numbers}")
+
+# Expected Output:
+# Numbers found: ['১২৩', '-৭৫.৫', '১,০০,০০০']
+```
+
+---
+
+### 4. `extract_time(text)`
+
+*   **Description:** Extracts time expressions in HH:MM or HH:MM:SS format. It supports Bengali and English digits, optional AM/PM markers (case-insensitive, with or without dots, e.g., `AM`, `pm`, `A.M.`, `পি.এম.`), and an optional trailing "টায়".
+*   **Supported Formats (Examples):** `১০:০০ AM`, `১৯:৪৫:০০`, `৯:৩০ মিনিটে` (extracts `৯:৩০`), `3:45 PM`, `১২:০০ PM টায়`, `8:00 P.M.`
+*   **Returns:** `list[str]` - A list of matched time expression strings.
+
+```python
+from bengali_normalizer.extractor import extract_time
+
+text = "সকাল ১০:৩০ টায় এবং রাত 21:00:15 তে দেখা হবে।"
+times = extract_time(text)
+print(f"Times found: {times}")
+
+# Expected Output:
+# Times found: ['১০:৩০ টায়', '21:00:15']
+```
+
+---
+
+### 5. `extract_taka_amounts(text)`
+
+*   **Description:** Finds expressions representing Bangladeshi Taka currency amounts. It looks for patterns starting with the Taka symbol (`৳`), or numbers followed by the words "টাকা" or "টাকার". It handles commas, decimal points, and potentially units like "লক্ষ" or "কোটি" when used with the symbol.
+*   **Supported Formats (Examples):** `৳৫০০`, `২৫০ টাকা`, `১০ টাকার`, `৳১,২৩,৪৫৬.৭৮`, `৳১০ লক্ষ টাকা`, `৳ ২৫০`
+*   **Returns:** `list[str]` - A list of matched Taka amount strings.
+
+```python
+from bengali_normalizer.extractor import extract_taka_amounts
+
+text = "খরচ ৳৫০০.৫০ এবং লাভ ২৫,০০০ টাকা।"
+amounts = extract_taka_amounts(text)
+print(f"Taka amounts found: {amounts}")
+
+# Expected Output:
+# Taka amounts found: ['৳৫০০.৫০', '২৫,০০০ টাকা']
+```
+
+---
+
+### 6. `extract_percentages(text)`
+
+*   **Description:** Detects percentage values, looking for numbers (integers or decimals, Bengali/English digits, optional negative sign) followed by either the percent symbol (`%`) or the Bengali word "শতাংশ". Allows for optional space between the number and the symbol/word.
+*   **Supported Formats (Examples):** `২০%`, `১৫.৫ শতাংশ`, `75.5 %`, `-১০শতাংশ`, `৯৯.৯%`
+*   **Returns:** `list[str]` - A list of matched percentage strings (including the number and the %/শতাংশ part).
+
+```python
+from bengali_normalizer.extractor import extract_percentages
+
+text = "ডিসকাউন্ট ছিল ১৫% এবং বৃদ্ধি -২.৫ শতাংশ।"
+percentages = extract_percentages(text)
+print(f"Percentages found: {percentages}")
+
+# Expected Output:
+# Percentages found: ['১৫%', '-২.৫ শতাংশ']
+```
+
+---
+
+### 7. `extract_temperatures(text)`
+
+*   **Description:** Finds temperature readings. It looks for numbers (integers/decimals, Bengali/English, optional negative sign) followed by common temperature units or symbols like `°C`, `°F`, `°K`, `ডিগ্রি`, `সেলসিয়াস`, `ফারেনহাইট`, `সে.` (abbreviation for Celsius). Case-insensitive for C/F/K.
+*   **Supported Formats (Examples):** `৩৫°C`, `৩২.৫ ডিগ্রি সেলসিয়াস`, `98.6°F`, `-৫° সে.`, `৪০ ডিগ্রি`, `100 C`
+*   **Returns:** `list[str]` - A list of matched temperature strings.
+
+```python
+from bengali_normalizer.extractor import extract_temperatures
+
+text = "তাপমাত্রা ছিল ৩০.৫°C অথবা প্রায় 87°F।"
+temperatures = extract_temperatures(text)
+print(f"Temperatures found: {temperatures}")
+
+# Expected Output:
+# Temperatures found: ['৩০.৫°C', '87°F']
+```
+
+---
+
+### 8. `extract_ratios(text)`
+
+*   **Description:** Detects expressions representing ratios. It looks for numbers separated by colons (`:`), Bengali visarga (`ঃ`), or hyphens (`-`). It also finds patterns like "X থেকে Y" and "X অনুপাত Y". Numbers can include decimals and commas. Optionally matches trailing words like "অনুপাতে" or "রেশিওতে".
+*   **Supported Formats (Examples):** `১:৩`, `৫:৩:১`, `২.৫:১`, `১ঃ১০০`, `৭-৩`, `১ থেকে ৫`, `১ অনুপাত ৫`, `২:১ অনুপাতে`
+*   **Returns:** `list[str]` - A list of matched ratio expression strings.
+
+```python
+from bengali_normalizer.extractor import extract_ratios
+
+text = "অনুপাত ২:৩ এবং সংখ্যা ১ থেকে ১০ এর মধ্যে।"
+ratios = extract_ratios(text)
+print(f"Ratios found: {ratios}")
+
+# Expected Output:
+# Ratios found: ['২:৩', '১ থেকে ১০']
+```
+
+---
+
+### 9. `extract_ordinals(text)`
+
+*   **Description:** Finds ordinal numbers, which indicate position or rank. It detects numbers (allowing commas) followed by common Bengali ordinal suffixes (`ম`, `য়`, `লা`, `রা`, `শে`, `ই`, `র্থ`, `তম`) or English suffixes (`st`, `nd`, `rd`, `th`).
+*   **Supported Formats (Examples):** `১ম`, `২য়`, `3rd`, `৪র্থ`, `১০ম`, `১লা`, `৩রা`, `২২শে`, `10,000তম`, `21st`
+*   **Returns:** `list[str]` - A list of matched ordinal number strings.
+
+```python
+from bengali_normalizer.extractor import extract_ordinals
+
+text = "সে ছিল ১ম এবং আমি ৩য়। আজ ১লা বৈশাখ।"
+ordinals = extract_ordinals(text)
+print(f"Ordinals found: {ordinals}")
+
+# Expected Output:
+# Ordinals found: ['১ম', '৩য়', '১লা']
+```
+
+---
+
+### 10. `extract_years_with_context(text)`
+
+*   **Description:** Specifically looks for 4-digit numbers that likely represent years, giving priority to those appearing immediately before or after context words like "সাল", "সালের", or "সন". It helps distinguish years from other 4-digit numbers. Supports Bengali and English digits for the year.
+*   **Supported Formats (Examples):** `২০২৫ সাল`, `সাল ১৯৭১`, `১৯৪৫ সন`, `২০২৩ সালের`
+*   **Returns:** `list[str]` - A list of matched year strings, including the context word if found (e.g., "২০২৫ সাল").
+
+```python
+from bengali_normalizer.extractor import extract_years_with_context
+
+text = "মুক্তিযুদ্ধ ১৯৭১ সালে হয়েছিল। নতুন পরিকল্পনা ২০২৫ সালের।"
+years = extract_years_with_context(text)
+print(f"Years with context found: {years}")
+
+# Expected Output:
+# Years with context found: ['১৯৭১ সালে', '২০২৫ সালের']
+```
+
+---
+
 
 ---
 
