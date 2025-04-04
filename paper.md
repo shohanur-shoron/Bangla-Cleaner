@@ -131,6 +131,30 @@ The foundation of this rule-based system lies in the curated linguistic knowledg
 
 The accuracy and coverage of the normalizer are directly tied to the quality and extensiveness of these resources. Their creation represents a significant knowledge engineering effort, capturing specific linguistic rules and conventions of Bengali.
 
+**3.8 Computational Complexity and Resource Considerations**
+
+An important aspect of evaluating any text processing system is understanding its computational demands and how its performance scales with input size.
+
+**Complexity of the Rule-Based System:**
+The normalization process implemented in our system operates as a pipeline with a fixed number (*P*) of distinct stages (pattern extraction, conversion, replacement, etc.). Within each stage, the primary operations involve regular expression matching (`re.findall`) over the text chunk (length *L*) and subsequent string manipulations or replacements based on the matches found (*M*). While regex matching can have theoretical worst cases, for the patterns employed here, practical performance is typically linear, approximately **O(L)**. Sorting matches takes O(M log M), usually negligible as M << L. The conversion and replacement steps also largely depend linearly on *L* or the length of the matches. Therefore, a single stage operates in roughly O(L) time.
+
+Since the pipeline has a constant number of stages *P*, the overall time complexity for processing an input text of length *N* (whether as one chunk or *S* chunks of average length *N/S*) is approximately *P* * O(N/S) * *S* = **O(N)**. The optional IPA conversion adds another linear pass, maintaining the overall **linear time complexity** relative to the input text length. This linear scaling means that processing time grows predictably and proportionally with the size of the text.
+
+**Comparison with Machine Learning Inference Complexity:**
+This linear complexity contrasts favorably with the theoretical inference time complexities of common ML models used for sequence-to-sequence tasks:
+
+*   **RNNs (LSTMs/GRUs):** These often exhibit complexities involving terms like O(N * M) or higher, influenced by hidden state sizes (*d*) and attention mechanisms, though still broadly linear in sequence lengths.
+*   **Standard Transformers:** The dominant architecture currently features a self-attention mechanism leading to a theoretical time complexity of **O(N² * d)** for the encoder, primarily due to the N² term related to input length *N*. While optimized variants aim to reduce this, the standard Transformer's quadratic scaling can become a bottleneck for very long sequences.
+
+**Resource Considerations and Practical Implications:**
+Beyond theoretical complexity, practical performance and resource requirements differ significantly:
+
+*   **Computational Intensity:** Our rule-based system relies on CPU-bound operations like string matching, dictionary lookups, and basic procedural logic. These operations are generally computationally lightweight compared to the massive matrix multiplications involved in deep learning models.
+*   **Hardware Dependencies:** ML models, especially large Transformers, achieve practical speed through massive parallelism on specialized hardware like GPUs or TPUs. Their performance is often orders of magnitude slower on standard CPUs. Our rule-based system, being primarily CPU-bound, runs efficiently on standard, widely available hardware, including systems with limited computational resources. **It does not require specialized accelerators**, making it highly accessible and deployable even on very low-resource or embedded systems where running large ML models would be infeasible due to power, memory, or computational constraints.
+*   **Predictability vs. Parallelism:** While the rule-based system offers predictable O(N) scaling on CPUs, ML models on GPUs can achieve higher throughput for moderate sequence lengths due to parallelism, despite potentially worse asymptotic complexity. However, the rule-based system's lower overhead and lack of dependence on specialized hardware make it a more resource-efficient choice in many deployment scenarios.
+
+The proposed rule-based system offers efficient **O(N) time complexity** and importantly, **low resource requirements**, allowing it to run effectively on standard CPUs and resource-constrained environments. This contrasts with typical ML models which, while potentially faster on specialized hardware for certain workloads, have higher theoretical complexity (often O(N²)) and significantly greater computational and hardware demands.
+
 **4. Experiments and Case Studies**
 
 Evaluating the performance of a text normalization system ideally requires standardized benchmark datasets and metrics. However, such resources are not readily available for Bengali normalization. In their absence, we demonstrate the system's functionality and effectiveness through qualitative analysis based on a diverse set of crafted test sentences designed to exercise different aspects of the normalization pipeline.
