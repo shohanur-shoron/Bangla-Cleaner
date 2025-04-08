@@ -258,7 +258,7 @@ The codebase for the described system is available for review and further develo
 
 **References**
 
-[1] Sproat, R., Black, A. W., Chen, S., Kumar, S., Ostendorf, M., & Richards, C. D. (2001). Normalization of non-standard words. *Computer Speech & Language, 15*(3), 287-333.
+[1] Sproat, R., Black, A. W., Chen, S., Kumar, S., Ostendorf, M., & Richards, C. D. (2001). Normalization of non-standard words. *Computer Speech & Language, 15*(3), 287-333.\n
 [2] Taylor, P. (2009). *Text-to-Speech Synthesis*. Cambridge University Press.
 [3] Allen, J., Hunnicutt, M. S., Klatt, D. H., Armstrong, R. C., & Pisoni, D. B. (1987). *From text to speech: The MITalk system*. Cambridge University Press.
 [4] Kaplan, R. M., & Kay, M. (1994). Regular models of phonological rule systems. *Computational Linguistics, 20*(3), 331-378.
